@@ -1,0 +1,496 @@
+/* ==========================================================================
+   PASAR TERMINAL — bahasa rupa "TAPE".
+
+   Aturannya satu kalimat: RANGKANYA tidak berwarna, ISINYA berwarna.
+
+   Rangka = hitam, tulang (putih hangat), merah. Tombol, tab, chip, angka
+   naik/turun, garis chart — semuanya di sini. Tidak ada warna aksen
+   antarmuka sama sekali; yang aktif ditandai dengan MEMBALIK bloknya
+   (latar tulang, teks hitam), persis kursor terminal. Dengan begitu warna
+   tidak pernah dipakai dua arti sekaligus:
+
+     tulang = naik · sehat · sedang dipilih
+     merah  = turun · risiko
+     abu    = konteks, tidak menuntut apa-apa
+
+   Isi = kategori berita dan peta, punya paletnya sendiri (--k-* di bawah).
+   Hue-nya menjawab "dari mana tekanannya datang", bukan sekadar membedakan:
+   jingga dari dalam negeri, sian dari luar, hijau satu emiten, merah
+   risiko. Rasional lengkapnya ada di app.js, di dekat WARNA_KAT.
+
+   Indeks di chart tetap dikecualikan: dibedakan dengan tebal garis dan pola
+   putus-putus, bukan warna. Yang perlu dibaca di chart itu BENTUK kurva,
+   dan tujuh garis berwarna saling menutupi bentuk satu sama lain. Peta
+   cetak keuangan sudah seabad memakai cara ini — dan hasilnya tetap terbaca
+   buat mata yang sulit membedakan warna.
+
+   Dua huruf: Archivo untuk yang dibaca (judul berita, kalimat),
+   IBM Plex Mono untuk yang dipindai (angka, kode, label). Angka wajib
+   monospace supaya kolom rata; kalimat wajib proporsional supaya tidak
+   melelahkan.
+   ========================================================================== */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+  --bg:      #000000;
+  --panel:   #0A0A09;
+  --panel2:  #111110;
+  --panel3:  #1A1917;
+  --garis:   #1E1C1A;
+  --garis2:  #34312C;
+
+  /* tulang: putih hangat, bukan putih layar. Lebih teduh dipandang lama. */
+  --teks:    #EDEAE4;
+  --redup:   #A5A29B;
+  --redup2:  #6B6862;
+  --abu:     #45423D;
+
+  /* satu-satunya warna: merah. Turun, risiko, peringatan. */
+  --merah:   #FF4438;
+  --merah2:  #8E241D;
+  --merahbg: rgba(255, 68, 56, .13);
+
+  /* arah data */
+  --naik:    var(--teks);
+  --turun:   var(--merah);
+
+  /* Warna ISI, bukan warna antarmuka. Dipakai kategori berita dan peta;
+     tombol/tab/angka tetap hitam-tulang-merah. Rasionalnya ada di app.js. */
+  --k-bursa:     #EDEAE4;   /* pasar itu sendiri   */
+  --k-makro-dom: #FF8A3D;   /* dapur sendiri       */
+  --k-makro-glo: #35C6E8;   /* datang dari luar    */
+  --k-kebijakan: #8C9EFF;   /* aturan main         */
+  --k-komoditas: #D9B310;   /* logam & tanah       */
+  --k-emiten:    #12D488;   /* satu perusahaan     */
+  --k-politik:   #FF4438;   /* risiko              */
+  --k-lainnya:   #45423D;
+  --k-rumah:     var(--k-makro-dom);
+  --k-luar:      var(--k-makro-glo);
+
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --sans: "Archivo", -apple-system, "Segoe UI", Helvetica, sans-serif;
+
+  --h-bar: 38px;
+}
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--teks);
+  font-family: var(--mono);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--teks); color: #000; }
+:focus-visible { outline: 1px solid var(--teks); outline-offset: 1px; }
+
+/* ---------- header ---------- */
+#bar {
+  display: flex; align-items: center; gap: 14px;
+  height: var(--h-bar);
+  background: var(--panel);
+  border-bottom: 1px solid var(--garis2);
+}
+/* blok terbalik: identitas sekaligus penanda "ini terminal, bukan situs" */
+.brand {
+  align-self: stretch; display: flex; align-items: center;
+  background: var(--teks); color: #000;
+  font-family: var(--mono);
+  font-weight: 700; letter-spacing: .22em; font-size: 10.5px;
+  padding: 0 13px 0 15px; white-space: nowrap;
+}
+.brand span { font-weight: 400; margin-left: 8px; letter-spacing: .14em; opacity: .58; }
+
+/* IHSG dipaku di kiri supaya selalu terbaca; sisanya berjalan.
+   Angka di benda bergerak susah dibaca justru saat dibutuhkan — jadi yang
+   paling penting tidak boleh ikut jalan. */
+.ticker { display: flex; align-items: center; flex: 1; min-width: 0; gap: 14px; }
+.tk-pin { flex-shrink: 0; padding-right: 14px; border-right: 1px solid var(--garis2); }
+.tk-jalan { flex: 1; overflow: hidden; min-width: 0; position: relative; }
+.tk-jalan::after {
+  content: ''; position: absolute; inset: 0 0 0 auto; width: 56px;
+  background: linear-gradient(90deg, transparent, var(--panel)); pointer-events: none;
+}
+.tk-isi { display: flex; gap: 26px; width: max-content; animation: jalan 52s linear infinite; }
+.tk-jalan:hover .tk-isi { animation-play-state: paused; }
+@keyframes jalan { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@media (prefers-reduced-motion: reduce) { .tk-isi { animation: none; } }
+
+.tk { display: flex; align-items: baseline; gap: 7px; white-space: nowrap; }
+.tk b { font-size: 10px; letter-spacing: .14em; font-weight: 500; color: var(--redup2); }
+.tk .v { font-size: 12px; color: var(--redup); }
+.tk .p { font-size: 11px; }
+.tk-pin .tk b { color: var(--teks); font-weight: 700; }
+.tk-pin .tk .v { font-size: 15px; font-weight: 600; color: var(--teks); }
+
+/* Naik = tulang, turun = merah. Panah dipasang lewat CSS supaya arahnya
+   masih terbaca tanpa warna sama sekali (cetak hitam-putih, buta warna). */
+.naik  { color: var(--naik); }
+.turun { color: var(--turun); }
+.tk .p.naik::before,  .p-angka .naik::before  { content: '\25B2 '; font-size: .78em; }
+.tk .p.turun::before, .p-angka .turun::before { content: '\25BC '; font-size: .78em; }
+
+.status {
+  display: flex; gap: 12px; align-items: center; padding-right: 13px;
+  font-size: 9.5px; color: var(--redup2); white-space: nowrap; letter-spacing: .1em;
+}
+.status .jam {
+  color: var(--teks); font-weight: 600; font-size: 11px; letter-spacing: .08em;
+}
+
+/* ---------- layout ---------- */
+#app { display: flex; height: calc(100% - var(--h-bar)); }
+#kiri { flex: 1; display: flex; flex-direction: column; min-width: 0; padding: 8px; gap: 7px; }
+#kanan {
+  width: 380px; flex-shrink: 0;
+  border-left: 1px solid var(--garis2);
+  background: var(--panel);
+  display: flex; flex-direction: column; min-height: 0;
+}
+
+.panel { position: relative; background: var(--panel); border: 1px solid var(--garis); }
+#wrapChart { flex: 1; min-height: 0; }
+.kecil { flex-shrink: 0; }
+
+/* Baris bawah: dua pita deret waktu di kiri, peta dunia di kanan. Petanya
+   dikunci 2:1 (proyeksi equirectangular) dan dapat lebar tetap supaya
+   bentuk benuanya tidak ikut melar saat jendela diubah. */
+#bawah { display: flex; gap: 6px; flex-shrink: 0; }
+#deret { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+#wrapDiv    { height: 100px; }
+#wrapRibbon { height: 76px; }
+#wrapPeta   { width: 372px; flex-shrink: 0; display: flex; flex-direction: column; }
+
+canvas { display: block; width: 100%; height: 100%; }
+#wrapDiv canvas    { height: calc(100% - 21px); }
+#wrapRibbon canvas { height: calc(100% - 21px); }
+#peta { flex: 1; min-height: 0; }
+
+.peta-ket {
+  flex-shrink: 0; padding: 3px 9px 5px;
+  font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+  color: var(--abu); display: flex; gap: 11px; flex-wrap: wrap; align-items: baseline;
+}
+.peta-ket em { font-family: var(--sans); font-style: normal; font-size: 10px;
+  letter-spacing: 0; color: var(--abu); }
+.peta-ket .wil { white-space: nowrap; }
+.peta-ket .wil b { font-weight: 600; }
+/* Awalan w- wajib: kelas .luar sudah dipakai badge "luar jam" di kartu
+   berita, lengkap dengan kotaknya, dan tanpa awalan keterangan peta ikut
+   terkurung kotak yang bukan miliknya. */
+.peta-ket .w-rumah { color: var(--k-rumah); }
+.peta-ket .w-luar  { color: var(--k-luar); }
+
+.label {
+  font-family: var(--mono);
+  font-size: 9px; letter-spacing: .22em; font-weight: 600;
+  color: var(--redup2); padding: 5px 9px 1px;
+  display: flex; align-items: baseline; gap: 10px;
+  white-space: nowrap; overflow: hidden;
+}
+.label > * { flex-shrink: 0; }
+.label em {
+  font-style: normal; font-weight: 400; letter-spacing: .02em;
+  color: var(--abu); text-transform: none; font-family: var(--sans); font-size: 10px;
+}
+/* Keterangan panjang di kanan label boleh terpotong, tidak boleh membungkus:
+   satu baris tambahan mendorong kanvas di bawahnya dan panelnya jadi gepeng. */
+.label .hint {
+  margin-left: auto; font-weight: 400; letter-spacing: 0; color: var(--abu);
+  font-family: var(--sans); font-size: 10px; text-transform: none;
+  display: flex; gap: 12px; align-items: center;
+  min-width: 0; flex-shrink: 1; overflow: hidden; text-overflow: ellipsis;
+}
+.label .hint i { display: inline-block; width: 8px; height: 8px; margin-right: 5px; }
+
+/* ---------- toolbar ---------- */
+.toolbar {
+  display: flex; gap: 10px; align-items: center; flex-shrink: 0;
+  padding: 0 1px; flex-wrap: wrap; row-gap: 6px;
+}
+/* satu kotak bersegmen, bukan sederet tombol lepas: batas luar tegas,
+   sekat dalam hairline. Mata membacanya sebagai SATU pilihan. */
+.grup { display: flex; border: 1px solid var(--garis2); }
+.grup .pil { border: 0; border-right: 1px solid var(--garis); }
+.grup .pil:last-child { border-right: 0; }
+.sekat { display: none; }
+
+.pil {
+  font-family: var(--mono); font-size: 10px; letter-spacing: .14em; font-weight: 500;
+  background: transparent; color: var(--redup2);
+  border: 1px solid var(--garis2); border-radius: 0;
+  padding: 4px 10px; cursor: pointer;
+  transition: background .08s linear, color .08s linear;
+}
+.pil:hover { color: var(--teks); background: var(--panel2); }
+/* aktif = blok dibalik. tanpa hue baru, tanpa ambiguitas. */
+.pil[aria-pressed="true"] { background: var(--teks); color: #000; border-color: var(--teks); }
+.pil[aria-pressed="true"]:hover { background: #fff; color: #000; }
+.pil.seri[aria-pressed="false"] { opacity: .5; }
+.pil.seri.kosong { text-decoration: line-through; opacity: .26; }
+/* contoh garis, bukan titik warna: yang membedakan indeks di chart memang
+   polanya, jadi tombolnya harus menunjukkan pola yang sama. */
+.pil .dot {
+  display: inline-block; width: 16px; height: 2px; margin-right: 7px;
+  vertical-align: middle; background-repeat: repeat-x;
+}
+.pil[aria-pressed="true"] .dot { filter: invert(1) contrast(2); }
+.pil.mini { padding: 1px 7px; font-size: 9px; letter-spacing: .1em; }
+.cmdbtn { margin-left: auto; color: var(--teks); border-color: var(--garis2); }
+.cmdbtn:hover { background: var(--teks); color: #000; }
+
+/* ---------- crosshair & legend ---------- */
+#crosshair {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: var(--garis2); pointer-events: none; display: none;
+}
+#crosshair.pin { background: var(--teks); }
+.legend {
+  position: absolute; top: 8px; left: 11px;
+  display: flex; gap: 15px; pointer-events: none; font-size: 10.5px;
+}
+.legend .li { display: flex; gap: 6px; align-items: center; }
+.legend .sw { width: 15px; height: 2px; background-repeat: repeat-x; }
+.legend .kd { letter-spacing: .1em; font-size: 10px; }
+
+/* ---------- panel kanan ---------- */
+#panelHead {
+  padding: 8px 11px 7px; border-bottom: 1px solid var(--garis2);
+  flex-shrink: 0; background: var(--panel2);
+}
+.p-baris1 { display: flex; align-items: center; gap: 8px; }
+.p-tanggal {
+  font-family: var(--mono); font-size: 11.5px; font-weight: 600; letter-spacing: .14em;
+  color: var(--teks); text-transform: uppercase;
+}
+.p-angka {
+  margin-top: 5px; display: flex; gap: 12px; flex-wrap: wrap;
+  font-size: 10px; color: var(--redup2);
+}
+.p-angka span b { font-weight: 600; color: var(--redup); }
+.p-angka .mendatang { color: var(--merah); letter-spacing: .06em; }
+.unpin {
+  margin-left: auto; font-family: var(--mono); font-size: 9px; letter-spacing: .12em;
+  background: none; color: var(--redup2);
+  border: 1px solid var(--garis2); border-radius: 0; padding: 1px 6px; cursor: pointer;
+}
+.unpin:hover { border-color: var(--teks); color: var(--teks); }
+
+/* ---------- kesimpulan ---------- */
+.p-sintesis {
+  padding: 7px 11px 8px; border-bottom: 1px solid var(--garis2); flex-shrink: 0;
+  font-family: var(--sans); font-size: 11px; line-height: 1.55; color: var(--redup);
+  max-height: 34vh; overflow-y: auto;
+}
+.p-sintesis .baris { display: flex; gap: 9px; align-items: baseline; margin: 3px 0; }
+.p-sintesis .tanda {
+  font-family: var(--mono);
+  font-size: 8.5px; letter-spacing: .18em; font-weight: 500;
+  color: var(--abu); min-width: 54px; flex-shrink: 0; padding-top: 1px;
+}
+.p-sintesis .isi { flex: 1; min-width: 0; }
+.p-sintesis b { color: var(--teks); font-weight: 600; }
+.p-sintesis .kosong-kecil { color: var(--abu); }
+
+/* meter: bagian tulang naik, bagian merah turun */
+.meter { display: flex; height: 4px; background: var(--garis); width: 96px; flex-shrink: 0; margin-right: 2px; }
+.meter i { display: block; height: 100%; }
+.meter .n { background: var(--teks); }
+.meter .t { background: var(--merah); }
+
+/* Tema itu daftar bacaan, bukan tombol. Dulu tiap tema dikurung kotak dan
+   panel kesimpulan berubah jadi dinding kotak kecil. Sekarang teks saja;
+   yang BARU hari ini ditandai satu garis merah di kiri -- satu-satunya
+   yang memang perlu ketahuan. */
+.tema-tag {
+  display: inline-block; font-family: var(--mono); font-size: 9px; letter-spacing: .06em;
+  padding: 0 7px 0 0; margin: 1px 3px 1px 0; color: var(--redup2);
+}
+.tema-tag.baru {
+  color: var(--teks); border-left: 2px solid var(--merah); padding-left: 5px;
+}
+.tema-tag .n { color: var(--abu); margin-left: 4px; }
+
+/* chip emiten di panel kesimpulan: klik -> lompat ke tab MIKRO */
+.emi-chip {
+  font-family: var(--mono); font-size: 9px; letter-spacing: .1em; cursor: pointer;
+  background: var(--panel3); border: 1px solid var(--garis2); color: var(--redup);
+  padding: 1px 6px; margin: 1px 2px 1px 0; border-radius: 0;
+}
+.emi-chip:hover { background: var(--teks); border-color: var(--teks); color: #000; }
+.emi-chip .n { color: var(--abu); margin-left: 5px; }
+.emi-chip:hover .n { color: #000; opacity: .55; }
+.emi-chip .ar { margin-left: 5px; font-size: 8px; }
+
+/* ---------- tab makro / mikro ---------- */
+.p-tab { display: flex; flex-shrink: 0; border-bottom: 1px solid var(--garis2); }
+.tab {
+  flex: 1; font-family: var(--mono); font-size: 10px; letter-spacing: .18em; font-weight: 600;
+  background: var(--panel); color: var(--abu); cursor: pointer;
+  border: none; border-right: 1px solid var(--garis); border-bottom: 2px solid transparent;
+  padding: 7px 4px;
+}
+.tab:last-child { border-right: none; }
+.tab:hover { color: var(--redup); }
+.tab[aria-pressed="true"] {
+  color: var(--teks); border-bottom-color: var(--teks); background: var(--panel2);
+}
+.tab .n { color: var(--abu); font-weight: 400; margin-left: 6px; font-size: 9px; }
+.tab[aria-pressed="true"] .n { color: var(--redup2); }
+
+.p-filter {
+  display: flex; gap: 4px; flex-wrap: wrap;
+  padding: 6px 11px; border-bottom: 1px solid var(--garis); flex-shrink: 0;
+}
+.p-filter:empty { display: none; }
+.chip {
+  font-family: var(--mono); font-size: 8.5px; letter-spacing: .12em;
+  background: none; border: 1px solid var(--garis2); color: var(--abu);
+  border-radius: 0; padding: 1px 6px; cursor: pointer;
+}
+.chip:hover { color: var(--redup); border-color: var(--abu); }
+.chip[aria-pressed="true"] { background: var(--teks); border-color: var(--teks); color: #000; }
+.chip.redup { opacity: .38; }
+/* Warna kategori dibawa titik, bukan teksnya: begitu chip dipilih, bloknya
+   dibalik jadi tulang-hitam seperti tombol lain, dan titiknya tetap memberi
+   tahu kategori mana. Kalau teksnya yang berwarna, dua bahasa itu bertabrakan
+   dan yang terpilih justru jadi tak terbaca. */
+.chip .dot {
+  display: inline-block; width: 6px; height: 6px; margin-right: 5px;
+  vertical-align: baseline;
+}
+.chip.reset { color: var(--redup2); border-color: var(--garis2); }
+
+.p-isi { overflow-y: auto; padding: 0 0 30px; flex: 1; min-height: 0; }
+.kosong {
+  padding: 38px 24px; text-align: center; color: var(--abu); line-height: 1.9;
+  font-family: var(--sans); font-size: 11px;
+}
+
+/* ---------- kepala grup (emiten / kategori) ---------- */
+.grup-kepala {
+  position: sticky; top: 0; z-index: 2;
+  display: flex; align-items: baseline; gap: 8px;
+  padding: 5px 11px; background: var(--panel2);
+  border-top: 1px solid var(--garis2); border-bottom: 1px solid var(--garis);
+  font-family: var(--mono); font-size: 9px; letter-spacing: .14em; color: var(--abu);
+}
+.grup-kepala .kode {
+  font-size: 11px; font-weight: 700; letter-spacing: .14em; color: var(--teks);
+}
+.grup-kepala .nm {
+  font-family: var(--sans); color: var(--redup); font-size: 10px; letter-spacing: .01em;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.grup-kepala .sek { color: var(--abu); font-size: 8.5px; }
+.grup-kepala .hit { margin-left: auto; flex-shrink: 0; }
+.grup-kepala .hit .up { color: var(--teks); }
+.grup-kepala .hit .dn { color: var(--merah); }
+
+/* ---------- kartu berita ---------- */
+/* Kepadatan terminal: yang dipindai mata itu judul + situs + jam.
+   Ringkasannya disembunyikan sampai kartunya disentuh, supaya satu layar
+   memuat belasan berita, bukan tiga. */
+.kartu {
+  padding: 6px 11px; border-bottom: 1px solid var(--garis);
+  border-left: 2px solid transparent; cursor: pointer; transition: background .08s linear;
+}
+.kartu:hover { background: var(--panel2); }
+.kartu .judul {
+  font-family: var(--sans); line-height: 1.38; margin-bottom: 3px; font-size: 12px;
+  font-weight: 500; letter-spacing: -.005em;
+}
+.kartu .judul a { color: var(--teks); text-decoration: none; }
+.kartu:hover .judul a { text-decoration: underline; text-underline-offset: 2px; }
+.kartu .ring {
+  font-family: var(--sans); color: var(--redup2); font-size: 10.5px; line-height: 1.5;
+  max-height: 0; overflow: hidden; opacity: 0;
+  transition: max-height .16s ease, opacity .16s ease, margin .16s ease;
+}
+.kartu:hover .ring, .kartu.buka .ring { max-height: 96px; opacity: 1; margin: 4px 0; }
+.kartu .kaki {
+  display: flex; gap: 7px; align-items: center; flex-wrap: wrap;
+  font-family: var(--mono); font-size: 8.5px; color: var(--abu); letter-spacing: .08em;
+}
+.kartu .sumber { color: var(--redup2); }
+.kartu .kat { letter-spacing: .16em; text-transform: uppercase; }
+.kartu .tik { color: var(--teks); border: 1px solid var(--garis2); padding: 0 4px; letter-spacing: .12em; }
+.luar { border: 1px solid var(--garis2); padding: 0 4px; color: var(--redup2); }
+.lain { margin-top: 4px; padding-left: 8px; border-left: 1px solid var(--garis2); }
+.lain a {
+  display: block; font-family: var(--sans); color: var(--redup2); text-decoration: none;
+  font-size: 10.5px; line-height: 1.45; padding: 1px 0;
+}
+.lain a:hover { color: var(--teks); }
+.lain .dom { font-family: var(--mono); font-size: 8.5px; color: var(--abu); }
+
+/* scrollbar setipis mungkin — ini panel data, bukan halaman */
+.p-isi::-webkit-scrollbar, .p-sintesis::-webkit-scrollbar, .cmd-hasil::-webkit-scrollbar { width: 7px; }
+.p-isi::-webkit-scrollbar-track, .p-sintesis::-webkit-scrollbar-track,
+.cmd-hasil::-webkit-scrollbar-track { background: var(--panel); }
+.p-isi::-webkit-scrollbar-thumb, .p-sintesis::-webkit-scrollbar-thumb,
+.cmd-hasil::-webkit-scrollbar-thumb { background: var(--garis2); }
+.p-isi::-webkit-scrollbar-thumb:hover, .p-sintesis::-webkit-scrollbar-thumb:hover,
+.cmd-hasil::-webkit-scrollbar-thumb:hover { background: var(--abu); }
+
+/* ---------- command bar ---------- */
+.cmd-lapis {
+  position: fixed; inset: 0; background: rgba(0, 0, 0, .84);
+  display: flex; align-items: flex-start; justify-content: center;
+  padding-top: 12vh; z-index: 50;
+}
+/* WAJIB. Atribut [hidden] cuma display:none dari stylesheet browser, dan
+   `display:flex` di atas mengalahkannya karena aturan author menang atas UA.
+   Tanpa baris ini command bar tampil sejak halaman dibuka dan Esc tidak
+   kelihatan efeknya -- padahal handler-nya jalan. */
+.cmd-lapis[hidden] { display: none; }
+.cmd-kotak {
+  width: min(660px, 94vw); background: var(--panel);
+  border: 1px solid var(--teks); border-radius: 0;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .9);
+}
+.cmd-baris {
+  display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+  border-bottom: 1px solid var(--garis);
+}
+.cmd-tanda { color: var(--teks); font-size: 14px; font-weight: 700; }
+#cmdInput {
+  flex: 1; background: none; border: none; outline: none;
+  color: var(--teks); font-family: var(--mono); font-size: 13px; letter-spacing: .04em;
+}
+#cmdInput::placeholder { color: var(--abu); letter-spacing: 0; font-family: var(--sans); }
+.cmd-hasil { max-height: 48vh; overflow-y: auto; }
+.cmd-item {
+  padding: 6px 14px; cursor: pointer; display: flex; gap: 11px; align-items: baseline;
+  border-left: 2px solid transparent;
+}
+.cmd-item:hover, .cmd-item.pilih { background: var(--panel2); border-left-color: var(--teks); }
+.cmd-item .tgl { font-family: var(--mono); font-size: 10.5px; color: var(--redup); min-width: 84px; flex-shrink: 0; }
+.cmd-item .jdl {
+  font-family: var(--sans); font-size: 11px; color: var(--teks); line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cmd-item .met { font-size: 10px; margin-left: auto; flex-shrink: 0; }
+.cmd-kaki {
+  display: flex; gap: 13px; flex-wrap: wrap;
+  padding: 7px 14px; border-top: 1px solid var(--garis);
+  font-family: var(--mono); font-size: 8.5px; color: var(--abu);
+}
+kbd {
+  font-family: var(--mono); font-size: 8.5px;
+  border: 1px solid var(--garis2); border-radius: 0;
+  padding: 0 4px; margin: 0 1px; color: var(--redup2);
+}
+
+@media (max-width: 1060px) {
+  body { overflow: auto; }
+  #app { flex-direction: column; height: auto; }
+  #kanan { width: auto; border-left: none; border-top: 1px solid var(--garis2); }
+  #kiri { height: 76vh; }
+  .label .hint { display: none; }
+  .brand span { display: none; }
+}

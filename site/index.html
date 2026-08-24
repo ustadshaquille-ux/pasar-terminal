@@ -1,0 +1,124 @@
+<!doctype html>
+<html lang="id" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PASAR TERMINAL — IHSG vs Dunia</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header id="bar">
+  <div class="brand">PASAR<span>TERMINAL</span></div>
+  <div class="ticker">
+    <div id="tickerPin" class="tk-pin"></div>
+    <div class="tk-jalan"><div id="tickerJalan" class="tk-isi"></div></div>
+  </div>
+  <div class="status">
+    <span id="update" title="waktu data terakhir diperbarui">—</span>
+    <span id="jam" class="jam"></span>
+  </div>
+</header>
+
+<main id="app">
+  <section id="kiri">
+
+    <div class="toolbar">
+      <div class="grup" id="rentang"></div>
+      <div class="grup" id="seri"></div>
+      <div class="grup">
+        <button id="skala" class="pil" title="Otomatis jadi log saat rentangnya lebar; sekali diklik, pilihannya menetap">LIN</button>
+        <button id="tglAlign" class="pil" title="Bursa AS tutup 04:00 WIB besok paginya, jadi close S&P tanggal D baru bisa dicerna IDX di sesi D+1">DAMPAK</button>
+      </div>
+      <button id="bukaCmd" class="pil cmdbtn" title="Command bar — tanggal, kata kunci, atau kode saham">/ CARI</button>
+    </div>
+
+    <div id="wrapChart" class="panel">
+      <canvas id="chart"></canvas>
+      <div id="crosshair"></div>
+      <div id="legend" class="legend"></div>
+    </div>
+
+    <div id="bawah">
+      <div id="deret">
+        <div id="wrapDiv" class="panel kecil">
+          <div class="label">DIVERGENSI
+            <button id="refDiv" class="pil mini" title="Tetangga Asia berkorelasi lebih kuat dengan IHSG (SET .35, KOSPI .33, STI .31, Nikkei .30) daripada S&amp;P 500 (.24), diukur Agu 2023–Agu 2026">VS RERATA ASIA</button>
+            <em id="refKet"></em>
+            <span class="hint">batang panjang = IHSG lepas dari arah kawanan, di situ berita lokal yang menentukan</span>
+          </div>
+          <canvas id="divergensi"></canvas>
+        </div>
+
+        <div id="wrapRibbon" class="panel kecil">
+          <div class="label">ALIRAN BERITA <em>tinggi = jumlah berita per hari bursa</em>
+            <span class="hint" id="ribLegend"></span>
+          </div>
+          <canvas id="ribbon"></canvas>
+        </div>
+      </div>
+
+      <div id="wrapPeta" class="panel kecil">
+        <div class="label">PETA DAMPAK
+          <button id="jejak" class="pil mini" aria-pressed="false"
+                  title="HARI: cuma sesi ini. JEJAK: 20 sesi ke belakang dijumlahkan dengan peluruhan, jadi tema yang bertahan berminggu-minggu kelihatan menyala pelan.">JEJAK</button>
+          <button id="putar" class="pil mini" aria-pressed="false"
+                  title="Jalankan sesi maju satu per satu. Panel berita menyusul begitu diberhentikan.">▶ PUTAR</button>
+        </div>
+        <canvas id="peta"></canvas>
+        <div id="petaKet" class="peta-ket"></div>
+      </div>
+    </div>
+
+  </section>
+
+  <aside id="kanan">
+    <div id="panelHead">
+      <div class="p-baris1">
+        <div id="pTanggal" class="p-tanggal">—</div>
+        <button id="unpin" class="unpin" hidden>UNPIN ✕</button>
+      </div>
+      <div id="pAngka" class="p-angka"></div>
+    </div>
+
+    <div id="pSintesis" class="p-sintesis"></div>
+
+    <div id="pTab" class="p-tab">
+      <button class="tab" data-t="MAKRO" aria-pressed="true">MAKRO</button>
+      <button class="tab" data-t="MIKRO" aria-pressed="false">MIKRO</button>
+      <button class="tab" data-t="SEMUA" aria-pressed="false">SEMUA</button>
+    </div>
+
+    <div id="pFilter" class="p-filter"></div>
+    <div id="pIsi" class="p-isi">
+      <div class="kosong">Geser kursor di atas chart untuk membaca berita hari itu.<br>
+        Klik untuk mengunci · <kbd>←</kbd> <kbd>→</kbd> pindah hari · <kbd>/</kbd> perintah</div>
+    </div>
+  </aside>
+</main>
+
+<div id="cmdLapis" class="cmd-lapis" hidden>
+  <div class="cmd-kotak">
+    <div class="cmd-baris">
+      <span class="cmd-tanda">&gt;</span>
+      <input id="cmdInput" type="text" autocomplete="off" spellcheck="false"
+             placeholder="tanggal (2026-03-10) · tema (bi rate, rupiah) · kode saham (BBRI)">
+    </div>
+    <div id="cmdHasil" class="cmd-hasil"></div>
+    <div class="cmd-kaki">
+      <span><kbd>←</kbd><kbd>→</kbd> hari</span>
+      <span><kbd>shift</kbd>+<kbd>←</kbd><kbd>→</kbd> hari penting</span>
+      <span><kbd>p</kbd> pin</span>
+      <span><kbd>m</kbd>/<kbd>k</kbd>/<kbd>a</kbd> makro·mikro·semua</span>
+      <span><kbd>1</kbd>–<kbd>7</kbd> indeks</span>
+      <span><kbd>esc</kbd> tutup</span>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

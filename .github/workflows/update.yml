@@ -1,0 +1,71 @@
+name: perbarui data
+
+on:
+  schedule:
+    # Sesi IDX 09:00-16:15 WIB = 02:00-09:15 UTC. Ditambah beberapa titik di
+    # luar sesi buat menangkap berita malam dan penutupan Wall Street.
+    - cron: '5,35 1-10 * * 1-5'
+    - cron: '5 12,15,18,21,23 * * *'
+  workflow_dispatch:
+    inputs:
+      backfill_hari:
+        description: 'Backfill berapa hari ke belakang (0 = tidak backfill)'
+        required: false
+        default: '0'
+      backfill_mulai:
+        description: 'Mundur dari tanggal ini (YYYY-MM-DD, kosong = hari ini)'
+        required: false
+        default: ''
+
+concurrency:
+  group: perbarui-data
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  perbarui:
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      # Tidak ada dependensi pihak ketiga: seluruh collector pakai pustaka
+      # standar Python. Satu hal yang lebih sedikit untuk rusak.
+      - name: Backfill (hanya saat dijalankan manual)
+        if: github.event_name == 'workflow_dispatch' && inputs.backfill_hari != '0'
+        working-directory: collector
+        run: |
+          python run.py impor
+          python run.py indices
+          python run.py backfill "${{ inputs.backfill_hari }}" "${{ inputs.backfill_mulai }}"
+
+      - name: Perbarui rutin
+        working-directory: collector
+        run: python run.py update
+
+      - name: Commit arsip kalau berubah
+        run: |
+          git config user.name  "pasar-bot"
+          git config user.email "pasar-bot@users.noreply.github.com"
+          git add site/data
+          if git diff --staged --quiet; then
+            echo "tidak ada perubahan data"
+          else
+            git commit -m "data: perbarui $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+          fi
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+      - id: deploy
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,8 @@
+__pycache__/
+*.pyc
+pasar.db
+pasar.db-wal
+pasar.db-shm
+
+# unduhan sekali pakai buat bangun peta; hasilnya (site/data/peta.json) yang diarsip
+cache_land.geojson
